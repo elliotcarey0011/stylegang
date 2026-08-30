@@ -10,8 +10,23 @@ latent walk frames → assemble video**.
 ## 0. Rent a RunPod pod
 
 1. https://runpod.io → Deploy → Pod.
-2. GPU: **RTX 4090** (24GB, ~$0.35–0.50/hr community cloud).
-3. Template: `RunPod PyTorch 2.x` (comes with CUDA + PyTorch preinstalled).
+2. GPU: **RTX 4090** (24GB, ~$0.35–0.50/hr community cloud). Ada Lovelace
+   GPUs need CUDA ≥11.8 to even be recognized, so any current RunPod CUDA
+   12.x template satisfies that automatically.
+3. Template: the official **PyTorch template on a CUDA 12.4 "devel" image**
+   (shown in the gallery as "PyTorch 2.4 + CUDA 12.4", tag looks like
+   `runpod/pytorch:...-cu1241-torch240-devel-ubuntu2204`). Pick **devel**,
+   not runtime — it ships `nvcc`, which stylegan2-ada-pytorch needs to
+   JIT-compile its custom `bias_act`/`upfirdn2d` CUDA kernels for full
+   speed. Don't chase the NVlabs README's literal ask of Python 3.7 /
+   PyTorch 1.7.1 / CUDA 11.0 — that's a 2020-era pin RunPod no longer even
+   offers, and it predates Ada Lovelace support. If the custom kernels ever
+   fail to compile against a newer torch, the repo silently falls back to a
+   slower pure-PyTorch implementation rather than breaking, so a version
+   mismatch costs speed, not correctness. If you want the compiled-kernel
+   speed and hit a build error, this is a well-reported working downgrade
+   inside the container: `pip install torch==2.0.1 torchvision==0.15.2
+   --index-url https://download.pytorch.org/whl/cu118`.
 4. Attach a **Network Volume** (e.g. 100GB) mounted at `/workspace` so your
    dataset and checkpoints survive if you stop/terminate the pod — training
    runs are cheap to pause and resume, don't pay to idle.
@@ -24,11 +39,9 @@ git clone https://github.com/NVlabs/stylegan2-ada-pytorch /workspace/stylegan2-a
 cd /workspace/stylegan2-ada-pytorch
 pip install click requests pyspng ninja imageio-ffmpeg==0.4.9 datasets pillow
 
-# copy this repo's scripts in (scp/git-clone stylegang, or paste them in)
+# get this repo's scripts onto the pod too
+git clone https://github.com/elliotcarey0011/stylegang /workspace/stylegang
 ```
-
-Get this `stylegang` repo onto the pod too (git clone it from wherever you
-push it, or `scp -r` the `scripts/` folder up).
 
 ## 2. Download + curate the dataset
 

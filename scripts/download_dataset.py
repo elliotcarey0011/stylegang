@@ -77,7 +77,7 @@ def main():
 
     from datasets import load_dataset
 
-    print(f"loading huggan/wikiart (streaming)... filter={wanted or 'all'}")
+    print(f"loading huggan/wikiart (streaming)... filter={wanted or 'all'}", flush=True)
     ds = load_dataset("huggan/wikiart", split="train", streaming=True)
     style_names = ds.features["style"].names
 
@@ -88,6 +88,10 @@ def main():
     for i, row in enumerate(ds):
         style_name = style_names[row["style"]]
         if wanted is not None and style_name not in wanted:
+            # heartbeat so a narrow filter doesn't look hung for minutes —
+            # most scanned rows get skipped here, not saved below
+            if (i + 1) % 500 == 0:
+                print(f"  scanned {i + 1} rows, {saved} matched so far...", flush=True)
             continue
 
         img = row["image"]
@@ -98,8 +102,8 @@ def main():
         img.save(out_dir / f"{saved:06d}.png")
         saved += 1
 
-        if saved % 200 == 0:
-            print(f"  saved {saved} images (scanned {i + 1})")
+        if saved % 50 == 0:
+            print(f"  saved {saved} images (scanned {i + 1})", flush=True)
         if args.limit and saved >= args.limit:
             break
 
