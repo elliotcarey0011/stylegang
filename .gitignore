@@ -1,0 +1,10 @@
+wikiart_raw/
+datasets/
+training-runs/
+latent_walk_frames/
+*.mp4
+*.pkl
+*.zip
+.venv/
+__pycache__/
+*.pyc

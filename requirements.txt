@@ -1,0 +1,7 @@
+# For scripts/download_dataset.py — runs anywhere (no GPU needed).
+datasets
+pillow
+
+# On the RunPod pod itself, also install (see README step 1):
+#   click requests pyspng ninja imageio-ffmpeg==0.4.9 torch
+# (torch is already preinstalled by the RunPod PyTorch template)
