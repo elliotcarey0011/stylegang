@@ -19,10 +19,16 @@ NVlabs/stylegan2-ada-pytorch checkout, since it imports that repo's
 """
 import argparse
 import os
+import sys
 
 import numpy as np
 import torch
 import PIL.Image
+
+# dnnlib/legacy live in the stylegan2-ada-pytorch checkout; being cwd'd into
+# it isn't enough since Python resolves imports relative to *this script's*
+# location, not the cwd, when invoked by path — so add cwd explicitly.
+sys.path.insert(0, os.getcwd())
 
 import dnnlib
 import legacy
@@ -60,33 +66,33 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print(f"loading network from {args.network}...")
-    with dnnlib.util.open_url(args.network) as f:
+    with torch.no_grad(), dnnlib.util.open_url(args.network) as f:
         G = legacy.load_network_pkl(f)["G_ema"].to(device)
 
-    seeds = list(range(args.seed_start, args.seed_start + args.seeds))
-    ws = []
-    for seed in seeds:
-        z = torch.from_numpy(np.random.RandomState(seed).randn(1, G.z_dim)).to(device)
-        c = torch.zeros((1, G.c_dim), device=device) if G.c_dim != 0 else None
-        w = G.mapping(z, c, truncation_psi=args.truncation_psi)
-        ws.append(w)
-    ws.append(ws[0])  # close the loop
+        seeds = list(range(args.seed_start, args.seed_start + args.seeds))
+        ws = []
+        for seed in seeds:
+            z = torch.from_numpy(np.random.RandomState(seed).randn(1, G.z_dim)).to(device)
+            c = torch.zeros((1, G.c_dim), device=device) if G.c_dim != 0 else None
+            w = G.mapping(z, c, truncation_psi=args.truncation_psi)
+            ws.append(w)
+        ws.append(ws[0])  # close the loop
 
-    frame_idx = 0
-    for i in range(len(ws) - 1):
-        w_a, w_b = ws[i], ws[i + 1]
-        shape = w_a.shape
-        for f in range(args.frames_per_transition):
-            t = ease(f / args.frames_per_transition)
-            w_interp = slerp(w_a.flatten(), w_b.flatten(), t).reshape(shape)
-            img = G.synthesis(w_interp, noise_mode=args.noise_mode)
-            img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-            PIL.Image.fromarray(img[0].cpu().numpy(), "RGB").save(
-                os.path.join(args.outdir, f"frame_{frame_idx:06d}.png")
-            )
-            frame_idx += 1
-            if frame_idx % 50 == 0:
-                print(f"  rendered {frame_idx} frames")
+        frame_idx = 0
+        for i in range(len(ws) - 1):
+            w_a, w_b = ws[i], ws[i + 1]
+            shape = w_a.shape
+            for f in range(args.frames_per_transition):
+                t = ease(f / args.frames_per_transition)
+                w_interp = slerp(w_a.flatten(), w_b.flatten(), t).reshape(shape)
+                img = G.synthesis(w_interp, noise_mode=args.noise_mode)
+                img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+                PIL.Image.fromarray(img[0].cpu().numpy(), "RGB").save(
+                    os.path.join(args.outdir, f"frame_{frame_idx:06d}.png")
+                )
+                frame_idx += 1
+                if frame_idx % 50 == 0:
+                    print(f"  rendered {frame_idx} frames")
 
     print(f"done: {frame_idx} frames -> {args.outdir}")
 

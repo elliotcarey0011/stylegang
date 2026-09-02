@@ -53,7 +53,7 @@ Cubism, etc.), center-crops to square, resizes to 512x512.
 python scripts/download_dataset.py \
   --out /workspace/datasets/wikiart_raw \
   --resolution 512 \
-  --styles abstract   # curated abstract-leaning styles, see --list-styles
+  --styles abstract 
 ```
 
 Swap `--styles all` or pass explicit `--styles Impressionism,Fauvism` to
@@ -93,11 +93,19 @@ keeps your checkpoints.
 ```bash
 cd /workspace/stylegan2-ada-pytorch
 python /workspace/stylegang/scripts/generate_latent_walk.py \
-  --network=~/training-runs/00000-.../network-snapshot-002000.pkl \
+  --network=~/training-runs/00004-wikiart512-mirror-paper512-kimg3000-noaug-resumeffhq512/network-snapshot-000000.pkl \
   --seeds=10 \
   --frames-per-transition=90 \
   --outdir=/workspace/latent_walk_frames
 ```
+
+cd /workspace/stylegan2-ada-pytorch
+PYTHONPATH=/workspace/stylegan2-ada-pytorch python /workspace/stylegang/scripts/generate_latent_walk.py \
+  --network=/workspace/training-runs/00004-wikiart512-mirror-paper512-kimg3000-noaug-resumeffhq512/network-snapshot-000000.pkl \
+  --seeds=10 \
+  --frames-per-transition=90 \
+  --outdir=/workspace/latent_walk_frames
+
 
 Spherically interpolates through the W (style) space between N random seeds
 in a smooth closed loop — this is the core "flowing data" Anadol effect.
@@ -105,7 +113,7 @@ in a smooth closed loop — this is the core "flowing data" Anadol effect.
 ## 6. Assemble the video
 
 ```bash
-bash scripts/render_video.sh /workspace/latent_walk_frames /workspace/output.mp4
+bash scripts/render_video.sh /workspace/latent_walk_frames /workspace/output6.mp4
 ```
 
 Encodes the PNG sequence to H.264 at 30fps and applies a light contrast/
@@ -119,3 +127,9 @@ browser) when done.
   (which just needs network + `datasets`/`pillow`, no GPU).
 - Cost-control: stop (don't just leave running) the pod when not actively
   training or rendering; the network volume persists your data.
+
+
+tail -n 30 /workspace/training-runs/*/log.txt
+
+watch -n 5 'wc -l /workspace/training-runs/*/stats.jsonl; ls -la /workspace/training-runs/*/*.png 2>/dev/null | tail -3'
+

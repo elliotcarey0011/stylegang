@@ -8,3 +8,4 @@ latent_walk_frames/
 .venv/
 __pycache__/
 *.pyc
+huggingfacetoken.md
